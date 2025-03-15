@@ -59,6 +59,7 @@ jobs:
               pull_number: context.issue.number
             });
             console.log('Files changed:', files.data.length);
+            console.log('Collecting PR data...');
             
             // Debug auth setup
             const username = '${{ secrets.WEBHOOK_USERNAME }}';
@@ -72,15 +73,67 @@ jobs:
             // Create basic auth and make request
             const auth = Buffer.from(`${username}:${password}`).toString('base64');
             
+            // Get PR comments
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            
+            // Get PR review comments
+            const reviewComments = await github.rest.pulls.listReviewComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            
             // Build PR data payload
             const prData = {
+              id: pr.data.id,
               number: pr.data.number,
               title: pr.data.title,
+              body: pr.data.body,
+              state: pr.data.state,
+              created_at: pr.data.created_at,
+              updated_at: pr.data.updated_at,
               repository: {
                 name: context.repo.repo,
                 owner: context.repo.owner
               },
-              files_count: files.data.length
+              head: {
+                ref: pr.data.head.ref,
+                sha: pr.data.head.sha
+              },
+              base: {
+                ref: pr.data.base.ref,
+                sha: pr.data.base.sha
+              },
+              user: {
+                login: pr.data.user.login,
+                id: pr.data.user.id
+              },
+              changed_files: files.data.map(file => ({
+                filename: file.filename,
+                status: file.status,
+                additions: file.additions,
+                deletions: file.deletions,
+                changes: file.changes,
+                patch: file.patch
+              })),
+              comments: comments.data.map(comment => ({
+                id: comment.id,
+                body: comment.body,
+                user: comment.user.login,
+                created_at: comment.created_at
+              })),
+              review_comments: reviewComments.data.map(comment => ({
+                id: comment.id,
+                body: comment.body,
+                user: comment.user.login,
+                path: comment.path,
+                position: comment.position,
+                created_at: comment.created_at
+              }))
             };
             
             console.log('Sending data to webhook...');
