@@ -40,8 +40,6 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          const core = require('@actions/core');
-          
           // Log basic info
           console.log('PR Number:', context.issue.number);
           console.log('Repo:', context.repo.owner + '/' + context.repo.repo);
@@ -126,14 +124,14 @@ jobs:
                   console.log('Successfully sent PR data to webhook');
                 } else {
                   console.error('Request failed with status code:', res.statusCode);
-                  core.setFailed('Failed to send PR data to webhook');
+                  console.error('Failed to send PR data to webhook');
                 }
               });
             });
             
             req.on('error', (error) => {
               console.error('Error sending request:', error.message);
-              core.setFailed('Network error when sending to webhook');
+              console.error('Network error when sending to webhook');
             });
             
             req.write(JSON.stringify(prData));
@@ -141,5 +139,5 @@ jobs:
             
           } catch (error) {
             console.error('Error:', error.message);
-            core.setFailed('Failed to process PR data: ' + error.message);
+            console.error('Failed to process PR data: ' + error.message);
           }
