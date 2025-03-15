@@ -126,7 +126,7 @@ jobs:
           // Set up curl command with proper JSON escaping
           const jsonData = JSON.stringify(prData).replace(/'/g, "'\\''");
           const curlCommand = `
-            curl -X POST "${{ secrets.WEBHOOK_URL }}" \\
+            curl -X POST "${{ vars.WEBHOOK_URL }}" \\
             -H "Authorization: Basic ${auth}" \\
             -H "Content-Type: application/json" \\
             -d '${jsonData}'
