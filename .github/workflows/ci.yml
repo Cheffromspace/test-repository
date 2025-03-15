@@ -79,6 +79,10 @@ jobs:
             state: pr.data.state,
             created_at: pr.data.created_at,
             updated_at: pr.data.updated_at,
+            repository: {
+              name: context.repo.repo,
+              owner: context.repo.owner
+            },
             head: {
               ref: pr.data.head.ref,
               sha: pr.data.head.sha
