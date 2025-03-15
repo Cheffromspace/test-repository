@@ -40,230 +40,106 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          // Import core for better error handling
           const core = require('@actions/core');
           
-          const prNumber = context.issue.number;
-          console.log('Debug: PR Number:', prNumber);
-          console.log('Debug: Context:', JSON.stringify(context));
-          
-          // Get PR details
-          console.log('Debug: Fetching PR details...');
-          const pr = await github.rest.pulls.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-          });
-          console.log('Debug: PR details fetched successfully');
-          
-          // Get PR files
-          console.log('Debug: Fetching PR files...');
-          const files = await github.rest.pulls.listFiles({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-          });
-          console.log(`Debug: Retrieved ${files.data.length} changed files`);
-          
-          // Get PR comments
-          console.log('Debug: Fetching PR comments...');
-          const comments = await github.rest.issues.listComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: prNumber
-          });
-          console.log(`Debug: Retrieved ${comments.data.length} comments`);
-          
-          // Get PR review comments
-          console.log('Debug: Fetching PR review comments...');
-          const reviewComments = await github.rest.pulls.listReviewComments({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            pull_number: prNumber
-          });
-          console.log(`Debug: Retrieved ${reviewComments.data.length} review comments`);
-          
-          // Prepare data for webhook
-          console.log('Debug: Preparing webhook data...');
-          const prData = {
-            id: pr.data.id,
-            number: pr.data.number,
-            title: pr.data.title,
-            body: pr.data.body,
-            state: pr.data.state,
-            created_at: pr.data.created_at,
-            updated_at: pr.data.updated_at,
-            repository: {
-              name: context.repo.repo,
-              owner: context.repo.owner
-            },
-            head: {
-              ref: pr.data.head.ref,
-              sha: pr.data.head.sha
-            },
-            base: {
-              ref: pr.data.base.ref,
-              sha: pr.data.base.sha
-            },
-            user: {
-              login: pr.data.user.login,
-              id: pr.data.user.id
-            },
-            changed_files: files.data.map(file => ({
-              filename: file.filename,
-              status: file.status,
-              additions: file.additions,
-              deletions: file.deletions,
-              changes: file.changes,
-              patch: file.patch
-            })),
-            comments: comments.data.map(comment => ({
-              id: comment.id,
-              body: comment.body,
-              user: comment.user.login,
-              created_at: comment.created_at
-            })),
-            review_comments: reviewComments.data.map(comment => ({
-              id: comment.id,
-              body: comment.body,
-              user: comment.user.login,
-              path: comment.path,
-              position: comment.position,
-              created_at: comment.created_at
-            }))
-          };
-          
-          // Post data to webhook with basic auth
-          console.log('Debug: Setting up webhook authentication...');
-          
-          // Create basic auth header
-          const username = '${{ secrets.WEBHOOK_USERNAME }}';
-          const password = '${{ secrets.WEBHOOK_AUTH_TOKEN }}';
-          
-          // Debug credential values (safely)
-          console.log('Debug: Username empty?', !username || username === '');
-          console.log('Debug: Password empty?', !password || password === '');
-          const usernameResolved = username.startsWith('$') ? "Not resolved" : "Resolved";
-          const passwordResolved = password.startsWith('$') ? "Not resolved" : "Resolved";
-          console.log('Debug: Username from secrets?', usernameResolved);
-          console.log('Debug: Password from secrets?', passwordResolved);
-          
-          const auth = Buffer.from(`${username}:${password}`).toString('base64');
-          console.log('Debug: Auth header created (not showing value for security)');
+          // Log basic info
+          console.log('PR Number:', context.issue.number);
+          console.log('Repo:', context.repo.owner + '/' + context.repo.repo);
           
           try {
-            // Use native https request instead of curl
-            const https = require('https');
-            const webhookUrl = '${{ vars.WEBHOOK_URL }}';
-            const webhookUrlSet = webhookUrl && webhookUrl !== '' && !webhookUrl.startsWith("$");
-            console.log('Debug: Webhook URL set?', webhookUrlSet);
+            // Get PR details
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
             
-            const url = new URL(webhookUrl);
-            console.log('Debug: Webhook hostname:', url.hostname);
-            console.log('Debug: Webhook path:', url.pathname);
+            // Get PR files
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number
+            });
+            console.log('Files changed:', files.data.length);
+            
+            // Debug auth setup
+            const username = '${{ secrets.WEBHOOK_USERNAME }}';
+            const password = '${{ secrets.WEBHOOK_AUTH_TOKEN }}';
+            const webhookUrl = '${{ vars.WEBHOOK_URL }}';
+            
+            console.log('Username present:', username ? 'Yes' : 'No');
+            console.log('Password present:', password ? 'Yes' : 'No');
+            console.log('Webhook URL present:', webhookUrl ? 'Yes' : 'No');
+            
+            // Create basic auth and make request
+            const auth = Buffer.from(`${username}:${password}`).toString('base64');
+            
+            // Build PR data payload
+            const prData = {
+              number: pr.data.number,
+              title: pr.data.title,
+              repository: {
+                name: context.repo.repo,
+                owner: context.repo.owner
+              },
+              files_count: files.data.length
+            };
+            
+            console.log('Sending data to webhook...');
+            
+            // Use https request
+            const https = require('https');
+            let url;
+            
+            try {
+              url = new URL(webhookUrl);
+              console.log('Webhook URL parsed successfully');
+            } catch (error) {
+              console.error('Invalid webhook URL:', webhookUrl);
+              throw new Error('Invalid webhook URL');
+            }
             
             const options = {
               hostname: url.hostname,
               port: url.port || 443,
-              path: url.pathname + url.search,
+              path: url.pathname,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Basic ${auth}`
               }
             };
-            console.log('Debug: Request options prepared:', JSON.stringify({
-              hostname: options.hostname,
-              port: options.port,
-              path: options.path,
-              method: options.method,
-              headers: {
-                'Content-Type': options.headers['Content-Type'],
-                'Authorization': 'Basic [REDACTED]'
-              }
-            }));
             
-            console.log('Debug: Sending request to webhook...');
+            // Make the request
             const req = https.request(options, (res) => {
-              console.log('Debug: Response received from webhook');
-              console.log('Debug: Status code:', res.statusCode);
-              console.log('Debug: Headers:', JSON.stringify(res.headers));
+              console.log('Response status code:', res.statusCode);
               
-              let responseData = '';
+              let data = '';
               res.on('data', (chunk) => {
-                responseData += chunk;
+                data += chunk;
               });
               
               res.on('end', () => {
-                const truncatedResponse = responseData.length > 500 ? responseData.substring(0, 500) + '...' : responseData;
-                console.log('Debug: Response body:', truncatedResponse);
+                console.log('Response body:', data.substring(0, 200));
                 
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                   console.log('Successfully sent PR data to webhook');
                 } else {
-                  const error = new Error(`Request failed with status code ${res.statusCode}`);
-                  console.error('Error sending PR data to webhook:', error);
-                  console.error('Response body:', responseData);
+                  console.error('Request failed with status code:', res.statusCode);
                   core.setFailed('Failed to send PR data to webhook');
                 }
               });
             });
             
             req.on('error', (error) => {
-              console.error('Error sending PR data to webhook:', error);
-              core.setFailed('Failed to send PR data to webhook');
+              console.error('Error sending request:', error.message);
+              core.setFailed('Network error when sending to webhook');
             });
             
-            console.log('Debug: Writing request body...');
             req.write(JSON.stringify(prData));
             req.end();
-            console.log('Debug: Request sent');
+            
           } catch (error) {
-            // Log error with full details
-            console.error('Error sending PR data to webhook:', error);
-            console.error('Error name:', error.name);
-            console.error('Error message:', error.message);
-            console.error('Error stack:', error.stack);
-            
-            // Check if webhook URL is valid
-            try {
-              const webhookUrl = '${{ vars.WEBHOOK_URL }}';
-              const webhookUrlPresent = webhookUrl ? "Present" : "Missing";
-              console.log('Debug: Webhook URL for validation:', webhookUrlPresent);
-              if (webhookUrl) {
-                new URL(webhookUrl); // Will throw if invalid
-                console.log('Debug: Webhook URL format is valid');
-              } else {
-                console.error('Debug: Webhook URL is empty or not set');
-              }
-            } catch (urlError) {
-              console.error('Debug: Invalid webhook URL format:', urlError.message);
-            }
-            
-            // Check if core is properly imported
-            if (typeof core === 'undefined') {
-              console.error('Debug: core is not defined - might need to import @actions/core');
-              // Try to import core
-              try {
-                const core = require('@actions/core');
-                core.setFailed('Failed to send PR data to webhook');
-              } catch (coreError) {
-                console.error('Debug: Failed to import @actions/core:', coreError.message);
-                // Use GitHub API to fail the workflow as fallback
-                github.rest.checks.update({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  check_run_id: context.runId,
-                  conclusion: 'failure',
-                  output: {
-                    title: 'PR Webhook Failed',
-                    summary: 'Failed to send PR data to webhook: ' + error.message
-                  }
-                }).catch(ghError => {
-                  console.error('Debug: Failed to update check status:', ghError.message);
-                });
-              }
-            } else {
-              core.setFailed('Failed to send PR data to webhook');
-            }
+            console.error('Error:', error.message);
+            core.setFailed('Failed to process PR data: ' + error.message);
           }
