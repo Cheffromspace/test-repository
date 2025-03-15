@@ -15,7 +15,7 @@ This repository demonstrates GitHub Pull Request automation with n8n, GitHub API
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/test-repository.git
+git clone https://github.com/jonflatt/test-repository.git
 cd test-repository
 
 # Install dependencies

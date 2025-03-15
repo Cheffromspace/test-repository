@@ -120,28 +120,45 @@ jobs:
           };
           
           // Post data to webhook with basic auth
-          const { execSync } = require('child_process');
           
           // Create basic auth header
-          const username = 'cheffromspace';
+          const username = '${{ secrets.WEBHOOK_USERNAME }}';
           const password = '${{ secrets.WEBHOOK_AUTH_TOKEN }}';
           const auth = Buffer.from(`${username}:${password}`).toString('base64');
           
-          // Set up curl command with proper JSON escaping
-          const jsonData = JSON.stringify(prData).replace(/'/g, "'\\''");
-          const curlCommand = `
-            curl -X POST "${{ vars.WEBHOOK_URL }}" \\
-            -H "Authorization: Basic ${auth}" \\
-            -H "Content-Type: application/json" \\
-            -d '${jsonData}'
-          `;
-          
           try {
-            // Execute curl command
-            execSync(curlCommand);
+            // Use native https request instead of curl
+            const https = require('https');
+            const url = new URL('${{ vars.WEBHOOK_URL }}');
             
-            // Log success
-            console.log('Successfully sent PR data to webhook');
+            const options = {
+              hostname: url.hostname,
+              port: url.port || 443,
+              path: url.pathname + url.search,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Basic ${auth}`
+              }
+            };
+            
+            const req = https.request(options, (res) => {
+              if (res.statusCode >= 200 && res.statusCode < 300) {
+                console.log('Successfully sent PR data to webhook');
+              } else {
+                const error = new Error(`Request failed with status code ${res.statusCode}`);
+                console.error('Error sending PR data to webhook:', error);
+                core.setFailed('Failed to send PR data to webhook');
+              }
+            });
+            
+            req.on('error', (error) => {
+              console.error('Error sending PR data to webhook:', error);
+              core.setFailed('Failed to send PR data to webhook');
+            });
+            
+            req.write(JSON.stringify(prData));
+            req.end();
           } catch (error) {
             // Log error
             console.error('Error sending PR data to webhook:', error);

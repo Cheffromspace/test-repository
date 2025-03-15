@@ -1,6 +1,22 @@
 import { sum, multiply } from '../src/utils.js';
 
 describe('Utils', () => {
+  describe('input validation', () => {
+    test('throws error for non-number inputs in sum', () => {
+      expect(() => sum('2', 3)).toThrow(TypeError);
+      expect(() => sum(2, '3')).toThrow(TypeError);
+      expect(() => sum(null, 3)).toThrow(TypeError);
+      expect(() => sum(undefined, 3)).toThrow(TypeError);
+    });
+    
+    test('throws error for non-number inputs in multiply', () => {
+      expect(() => multiply('2', 3)).toThrow(TypeError);
+      expect(() => multiply(2, '3')).toThrow(TypeError);
+      expect(() => multiply(null, 3)).toThrow(TypeError);
+      expect(() => multiply(undefined, 3)).toThrow(TypeError);
+    });
+  });
+
   describe('sum', () => {
     test('adds two positive numbers correctly', () => {
       expect(sum(2, 3)).toBe(5);
