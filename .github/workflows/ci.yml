@@ -140,14 +140,8 @@ jobs:
             // Execute curl command
             execSync(curlCommand);
             
-            // Log success and add comment to PR
+            // Log success
             console.log('Successfully sent PR data to webhook');
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-              body: 'This PR data has been sent for AI-powered code review.'
-            });
           } catch (error) {
             // Log error
             console.error('Error sending PR data to webhook:', error);
