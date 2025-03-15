@@ -143,8 +143,8 @@ jobs:
           // Debug credential values (safely)
           console.log('Debug: Username empty?', !username || username === '');
           console.log('Debug: Password empty?', !password || password === '');
-          console.log('Debug: Username from secrets?', username.startsWith('${{') ? 'Not resolved' : 'Resolved');
-          console.log('Debug: Password from secrets?', password.startsWith('${{') ? 'Not resolved' : 'Resolved');
+          console.log('Debug: Username from secrets?', username.startsWith('${{') ? "Not resolved" : "Resolved");
+          console.log('Debug: Password from secrets?', password.startsWith('${{') ? "Not resolved" : "Resolved");
           
           const auth = Buffer.from(`${username}:${password}`).toString('base64');
           console.log('Debug: Auth header created (not showing value for security)');
@@ -153,7 +153,7 @@ jobs:
             // Use native https request instead of curl
             const https = require('https');
             const webhookUrl = '${{ vars.WEBHOOK_URL }}';
-            console.log('Debug: Webhook URL set?', webhookUrl && webhookUrl !== '' && !webhookUrl.startsWith('${{'));
+            console.log('Debug: Webhook URL set?', webhookUrl && webhookUrl !== '' && !webhookUrl.startsWith("${{"));
             
             const url = new URL(webhookUrl);
             console.log('Debug: Webhook hostname:', url.hostname);
@@ -224,7 +224,7 @@ jobs:
             // Check if webhook URL is valid
             try {
               const webhookUrl = '${{ vars.WEBHOOK_URL }}';
-              console.log('Debug: Webhook URL for validation:', webhookUrl ? 'Present' : 'Missing');
+              console.log('Debug: Webhook URL for validation:', webhookUrl ? "Present" : "Missing");
               if (webhookUrl) {
                 new URL(webhookUrl); // Will throw if invalid
                 console.log('Debug: Webhook URL format is valid');
