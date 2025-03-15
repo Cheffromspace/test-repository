@@ -123,12 +123,13 @@ jobs:
           const password = '${{ secrets.WEBHOOK_AUTH_TOKEN }}';
           const auth = Buffer.from(`${username}:${password}`).toString('base64');
           
-          // Set up curl command
+          // Set up curl command with proper JSON escaping
+          const jsonData = JSON.stringify(prData).replace(/'/g, "'\\''");
           const curlCommand = `
             curl -X POST "${{ secrets.WEBHOOK_URL }}" \\
             -H "Authorization: Basic ${auth}" \\
             -H "Content-Type: application/json" \\
-            -d '${JSON.stringify(prData)}'
+            -d '${jsonData}'
           `;
           
           try {
