@@ -40,9 +40,7 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
-          // Log basic info
-          console.log('PR Number:', context.issue.number);
-          console.log('Repo:', context.repo.owner + '/' + context.repo.repo);
+          console.log('Processing PR #' + context.issue.number + ' in ' + context.repo.owner + '/' + context.repo.repo);
           
           try {
             // Get PR details
@@ -59,18 +57,11 @@ jobs:
               pull_number: context.issue.number
             });
             console.log('Files changed:', files.data.length);
-            console.log('Collecting PR data...');
             
-            // Debug auth setup
+            // Setup auth
             const username = '${{ secrets.WEBHOOK_USERNAME }}';
             const password = '${{ secrets.WEBHOOK_AUTH_TOKEN }}';
             const webhookUrl = '${{ vars.WEBHOOK_URL }}';
-            
-            console.log('Username present:', username ? 'Yes' : 'No');
-            console.log('Password present:', password ? 'Yes' : 'No');
-            console.log('Webhook URL present:', webhookUrl ? 'Yes' : 'No');
-            
-            // Create basic auth and make request
             const auth = Buffer.from(`${username}:${password}`).toString('base64');
             
             // Get PR comments
@@ -136,19 +127,11 @@ jobs:
               }))
             };
             
-            console.log('Sending data to webhook...');
+            console.log('Sending PR data to webhook...');
             
             // Use https request
             const https = require('https');
-            let url;
-            
-            try {
-              url = new URL(webhookUrl);
-              console.log('Webhook URL parsed successfully');
-            } catch (error) {
-              console.error('Invalid webhook URL:', webhookUrl);
-              throw new Error('Invalid webhook URL');
-            }
+            const url = new URL(webhookUrl);
             
             const options = {
               hostname: url.hostname,
@@ -163,34 +146,25 @@ jobs:
             
             // Make the request
             const req = https.request(options, (res) => {
-              console.log('Response status code:', res.statusCode);
-              
               let data = '';
-              res.on('data', (chunk) => {
-                data += chunk;
-              });
+              res.on('data', (chunk) => { data += chunk; });
               
               res.on('end', () => {
-                console.log('Response body:', data.substring(0, 200));
-                
                 if (res.statusCode >= 200 && res.statusCode < 300) {
                   console.log('Successfully sent PR data to webhook');
                 } else {
-                  console.error('Request failed with status code:', res.statusCode);
-                  console.error('Failed to send PR data to webhook');
+                  console.error('Failed to send PR data to webhook: ' + res.statusCode);
                 }
               });
             });
             
             req.on('error', (error) => {
-              console.error('Error sending request:', error.message);
-              console.error('Network error when sending to webhook');
+              console.error('Network error when sending to webhook: ' + error.message);
             });
             
             req.write(JSON.stringify(prData));
             req.end();
             
           } catch (error) {
-            console.error('Error:', error.message);
             console.error('Failed to process PR data: ' + error.message);
           }
