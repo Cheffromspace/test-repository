@@ -1,0 +1,30 @@
+{
+  "name": "test-repository",
+  "version": "1.0.0",
+  "description": "Sample project for testing GitHub PR automation workflows",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "ci": "npm run lint && npm test"
+  },
+  "keywords": [
+    "automation",
+    "github",
+    "n8n",
+    "testing"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/jest": "^29.5.14",
+    "eslint": "^9.22.0",
+    "eslint-plugin-jest": "^28.11.0",
+    "jest": "^29.7.0"
+  }
+}
